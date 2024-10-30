@@ -6,8 +6,18 @@ grades = []
 def generate_html():
     html = "<html><head><meta charset='UTF-8'><title>Оценки по дисциплинам</title></head><body>"
     html += "<h1>Оценки по дисциплинам</h1><ul>"
+    subjects = {}
     for grade in grades:
-        html += f"<li>{grade['subject']}: {grade['score']}</li>"
+        subject = grade['subject']
+        score = grade['score']
+        if subject in subjects:
+            subjects[subject].append(score)
+        else:
+            subjects[subject] = [score]
+
+    # Вывод оценок с объединением по предмету
+    for subject, scores in subjects.items():
+        html += f"<li>{subject}: {', '.join(scores)}</li>"
     html += "</ul>"
     html += '''
         <h2>Добавить оценку</h2>
