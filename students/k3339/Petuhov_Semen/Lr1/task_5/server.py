@@ -2,7 +2,7 @@ import socket
 from urllib.parse import unquote_plus
 
 grades = []
-
+#Генерация html по данным из массива grades
 def generate_html():
     html = "<html><head><meta charset='UTF-8'><title>Оценки по дисциплинам</title></head><body>"
     html += "<h1>Оценки по дисциплинам</h1><ul>"
@@ -15,7 +15,7 @@ def generate_html():
         else:
             subjects[subject] = [score]
 
-    # Вывод оценок с объединением по предмету
+    # Вывод оценок
     for subject, scores in subjects.items():
         html += f"<li>{subject}: {', '.join(scores)}</li>"
     html += "</ul>"
@@ -60,7 +60,7 @@ def run_server():
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.bind(('localhost', 8080))
     server_socket.listen(5)
-    print("Сервер запущен на порту 8080...")
+    print("Сервер запущен на порту 8080")
 
     while True:
         client_socket, addr = server_socket.accept()

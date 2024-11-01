@@ -1,7 +1,7 @@
 import socket
 import math
 
-
+#Обработчик необходимых математических операций
 def math_operation(operation, params):
     if operation == '1':  # Пифагор
         a, b = float(params[0]), float(params[1])
@@ -31,17 +31,17 @@ def math_operation(operation, params):
     else:
         return "Неверный номер операции"
 
-
+#Создание сокета
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server_address = ('localhost', 1934)
 server_socket.bind(server_address)
 server_socket.listen(1)
-
+#Обработчик сообщений
 while True:
-    connection, client_address = server_socket.accept()
+    connection, client_address = server_socket.accept() #Подключение клиента
     try:
         print(f"Client_address: {client_address}")
-
+        #Обработчик сообщения от пользователя
         data = connection.recv(1024).decode()
         if data:
             parts = data.split(' ')

@@ -1,6 +1,6 @@
 import socket
 
-
+#Логика консольного ввода
 def get_operation_inp():
     print("Выберите операцию:")
     print("1. Теорема Пифагора")
@@ -34,11 +34,11 @@ def get_operation_inp():
     else:
         return "Неверный номер операции"
 
-
+#Подключение сокета
 client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server_address = ('localhost', 1934)
 client_socket.connect(server_address)
-
+#Отправка запроса
 try:
     request = get_operation_inp()
     client_socket.sendall(request.encode())
