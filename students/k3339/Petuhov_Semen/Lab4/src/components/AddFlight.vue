@@ -16,7 +16,7 @@
         <label for="schedule">Расписание:</label>
         <select v-model="newFlight.schedule_number" id="schedule" required>
           <option v-for="schedule in schedules" :key="schedule.schedule_number" :value="schedule.schedule_number">
-            №{{ schedule.schedule_number }}
+            {{ schedule.schedule_number }}
           </option>
         </select>
 
@@ -49,7 +49,6 @@
 
 <script>
 import axios from 'axios';
-
 export default {
   data() {
     return {
@@ -58,7 +57,7 @@ export default {
         onBoard_number: "",  // Новое поле для самолета
         departure_date: "",
         arrival_date: "",
-        status: "scheduled",
+        status: "waiting",
       },
       aircraftNumbers: [],
       schedules: [],
@@ -75,7 +74,6 @@ export default {
         arrival_date: this.newFlight.arrival_date,              // Только дата
         status: this.newFlight.status,
       };
-
       try {
         console.log(flightData);  // Проверка отправляемых данных
         const response = await axios.post(
@@ -87,14 +85,11 @@ export default {
               },
             }
         );
-
         this.$emit("save", response.data);
       } catch (error) {
         console.error("Ошибка при сохранении рейса:", error);
       }
     },
-
-
     async loadData() {
       try {
         const [aircraftsResponse, schedulesResponse] = await Promise.all([
@@ -105,7 +100,6 @@ export default {
             headers: {Authorization: `Token ${this.token}`},
           }),
         ]);
-
         this.aircraftNumbers = aircraftsResponse.data.onBoard_numbers; // Номера самолетов
         this.schedules = schedulesResponse.data;  // Расписания
       } catch (error) {

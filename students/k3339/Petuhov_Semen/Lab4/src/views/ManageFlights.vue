@@ -1,9 +1,7 @@
 <template>
   <div class="manage-flights">
-    <!-- Кнопка назад -->
     <button @click="goBack" class="back-button">Назад</button>
 
-    <!-- Фильтрация -->
     <div class="filters">
       <label for="date-filter">Фильтр по дате:</label>
       <input type="date" id="date-filter" v-model="dateFilter" @change="filterFlights" />
@@ -18,26 +16,26 @@
       />
     </div>
 
-    <!-- Кнопка добавления рейса -->
     <button @click="openAddFlightModal" class="add-flight-btn">Добавить рейс</button>
 
-    <!-- Таблица рейсов -->
     <table>
       <thead>
       <tr>
         <th>Номер рейса</th>
+        <th>Бортовой номер самолёта</th>
         <th>Пункт назначения</th>
         <th>Пункт вылета</th>
         <th>Дата и время вылета</th>
         <th>Дата и время прилета</th>
         <th>Статус</th>
         <th>Экипаж</th>
-        <th>Действия</th> <!-- Добавляем колонку для действий -->
+        <th>Действия</th>
       </tr>
       </thead>
       <tbody>
       <tr v-for="flight in filteredFlights" :key="flight.flight_number">
         <td>{{ flight.flight_number }}</td>
+        <td>{{ getOnBoardNumber(flight) }}</td>
         <td>{{ getTransitAddress(flight) }}</td>
         <td>{{ flight.airport_departure_address }}</td>
         <td>{{ formatDate(flight.departure_date) }}</td>
@@ -51,24 +49,27 @@
           </ul>
         </td>
         <td>
-          <button @click="deleteFlight(flight.flight_number)" class="delete-btn">Удалить</button> <!-- Кнопка удаления -->
+          <button @click="openEditFlightModal(flight)" class="edit-btn">Редактировать</button>
+          <button @click="deleteFlight(flight.flight_number)" class="delete-btn">Удалить</button>
         </td>
       </tr>
       </tbody>
     </table>
 
-    <!-- Модальное окно для добавления рейса -->
-    <AddFlightModal v-if="isModalOpen" @close="closeAddFlightModal" @save="addFlight" />
+    <AddFlightModal v-if="isAddModalOpen" @close="closeAddFlightModal" @save="addFlight" />
+    <EditFlightModal v-if="isEditModalOpen" :flight="selectedFlight" @close="closeEditFlightModal" @save="updateFlight"/>
   </div>
 </template>
 
 <script>
 import AddFlightModal from "@/components/AddFlight.vue";
+import EditFlightModal from "@/components/EditFlight.vue"; // Импортируем компонент модального окна редактирования
 import axios from "axios";
 
 export default {
   components: {
     AddFlightModal,
+    EditFlightModal, // Регистрируем компонент
   },
   data() {
     return {
@@ -76,7 +77,9 @@ export default {
       filteredFlights: [],
       dateFilter: "",
       destinationFilter: "",
-      isModalOpen: false,
+      isAddModalOpen: false,
+      isEditModalOpen: false,
+      selectedFlight: null,
       token: localStorage.getItem("auth_token"),
     };
   },
@@ -90,7 +93,6 @@ export default {
           console.error("Токен не найден. Вы должны быть авторизованы.");
           return;
         }
-
         const response = await axios.get("/api/flights/", {
           headers: {
             Authorization: `Token ${this.token}`,
@@ -107,7 +109,6 @@ export default {
         this.filteredFlights = this.flights;
         return;
       }
-
       this.filteredFlights = this.flights.filter((flight) => {
         const matchDate = this.dateFilter
             ? flight.departure_date.startsWith(this.dateFilter)
@@ -130,11 +131,17 @@ export default {
       }
       return "";
     },
+    getOnBoardNumber(flight) {
+      if (flight.aircraft) {
+        return flight.aircraft.onBoard_number;
+      }
+      return "";
+    },
     openAddFlightModal() {
-      this.isModalOpen = true;
+      this.isAddModalOpen = true;
     },
     closeAddFlightModal() {
-      this.isModalOpen = false;
+      this.isAddModalOpen = false;
     },
     addFlight(newFlightData) {
       this.flights.push(newFlightData);
@@ -148,19 +155,16 @@ export default {
     async deleteFlight(flightNumber) {
       const isConfirmed = confirm("Вы уверены, что хотите удалить этот рейс?");
       if (!isConfirmed) return;
-
       try {
         if (!this.token) {
           console.error("Токен не найден. Вы должны быть авторизованы.");
           return;
         }
-
         await axios.delete(`/api/flight/${flightNumber}/`, {
           headers: {
             Authorization: `Token ${this.token}`,
           },
         });
-
         // Обновление списка рейсов
         this.flights = this.flights.filter(flight => flight.flight_number !== flightNumber);
         this.filteredFlights = this.flights; // Применяем фильтрацию снова
@@ -168,18 +172,34 @@ export default {
         console.error("Ошибка при удалении рейса:", error);
       }
     },
+
+    openEditFlightModal(flight) {
+      this.selectedFlight = flight; // Сохраняем выбранный рейc
+      this.isEditModalOpen = true;
+    },
+    closeEditFlightModal() {
+      this.selectedFlight = null; // Очищаем выбранный рейс
+      this.isEditModalOpen = false;
+    },
+    async updateFlight(updatedFlight) {
+        const index = this.flights.findIndex(flight => flight.flight_number === updatedFlight.flight_number);
+        if (index !== -1) {
+          this.flights.splice(index, 1, updatedFlight);
+        }
+        this.filterFlights();
+        this.closeEditFlightModal();
+    },
   },
 };
 </script>
-
 <style scoped>
 .manage-flights {
   padding: 20px;
 }
-
 .back-button,
 .add-flight-btn,
-.delete-btn { /* Стили для кнопок */
+.delete-btn,
+.edit-btn{
   background-color: #007bff;
   color: white;
   padding: 10px 20px;
@@ -187,44 +207,37 @@ export default {
   border-radius: 5px;
   cursor: pointer;
 }
-
 .back-button:hover,
 .add-flight-btn:hover,
-.delete-btn:hover {
+.delete-btn:hover,
+.edit-btn:hover{
   background-color: #0056b3;
 }
-
 .filters {
   margin-bottom: 20px;
 }
-
 input[type="date"],
 input[type="text"] {
   padding: 10px;
   margin-right: 10px;
 }
-
 table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 20px;
 }
-
 th,
 td {
   padding: 10px;
   text-align: left;
   border-bottom: 1px solid #ccc;
 }
-
 th {
   background-color: #f4f4f4;
 }
-
 button.delete-btn {
   background-color: #dc3545; /* Красный для кнопки удаления */
 }
-
 button.delete-btn:hover {
   background-color: #c82333;
 }

@@ -21,35 +21,44 @@
       <tr>
         <th>Номер экипажа</th>
         <th>Код сотрудника</th>
+        <th>ФИО</th>
         <th>Номер рейса</th>
         <th>Должность</th>
         <th>Дата медосмотра</th>
         <th>Статус проверки</th>
+        <th>Действия</th>
       </tr>
       </thead>
       <tbody>
       <tr v-for="crew in filteredCrewList" :key="crew.crew_number">
         <td>{{ crew.crew_number }}</td>
-        <td>{{ crew.employee_code }}</td>
+        <td>{{ crew.employee_code.employee_code }}</td>
+        <td>{{ crew.employee_code.full_name }}</td>
         <td>{{ crew.flight_number }}</td>
         <td>{{ crew.flight_position }}</td>
         <td>{{ crew.medical_check_date }}</td>
         <td>{{ crew.clearance_status }}</td>
+        <td>
+          <button @click="openEditCrewModal(crew)" class="edit-btn">Редактировать</button>
+          <button @click="deleteCrew(crew.crew_number)" class="delete-btn">Удалить</button>
+        </td>
       </tr>
       </tbody>
     </table>
 
     <!-- Модальное окно для добавления экипажа -->
     <CrewForm v-if="isModalOpen" @close="closeAddCrewModal" @save="addCrew" />
+    <EditCrewModal v-if="isEditModalOpen" :crew="selectedCrew" @close="closeEditCrewModal" @save="updateCrew"/>
   </div>
 </template>
 
 <script>
 import axios from 'axios';
-import CrewForm from '@/components/AddCrew.vue'; // Импортируем компонент для добавления экипажа
+import CrewForm from '@/components/AddCrew.vue';
+import EditCrewModal from "@/components/EditCrew.vue"; // Импортируем компонент для добавления экипажа
 
 export default {
-  components: { CrewForm },
+  components: {EditCrewModal, CrewForm },
   data() {
     return {
       crewList: [],
@@ -57,6 +66,8 @@ export default {
       positionFilter: '',
       employeeFilter: '',
       isModalOpen: false,
+      isEditModalOpen: false,
+      selectedCrew: null,
       token: localStorage.getItem('auth_token'),
     };
   },
@@ -104,7 +115,43 @@ export default {
       this.closeAddCrewModal();
     },
     goBack() {
-      this.$router.back();
+      this.$router.push("/dashboard");
+    },
+    async deleteCrew(crewNumber) {
+      const isConfirmed = confirm("Вы уверены, что хотите удалить этот рейс?");
+      if (!isConfirmed) return;
+      try {
+        if (!this.token) {
+          console.error("Токен не найден. Вы должны быть авторизованы.");
+          return;
+        }
+        await axios.delete(`/api/crew/${crewNumber}/`, {
+          headers: {
+            Authorization: `Token ${this.token}`,
+          },
+        });
+        // Обновление списка рейсов
+        this.crewList = this.crewList.filter(crew => crew.crew_number !== crewNumber);
+        this.filteredCrewList = this.crewList; // Применяем фильтрацию снова
+      } catch (error) {
+        console.error("Ошибка при удалении члена экипажа:", error);
+      }
+    },
+    openEditCrewModal(crew) {
+      this.selectedCrew = crew;
+      this.isEditModalOpen = true;
+    },
+    closeEditCrewModal() {
+      this.selectedCrew = null; // Очищаем выбранный рейс
+      this.isEditModalOpen = false;
+    },
+    async updateCrew(updatedCrew) {
+      const index = this.crewList.findIndex(crew => crew.crew_number === updatedCrew.crew_number);
+      if (index !== -1) {
+        this.crewList.splice(index, 1, updatedCrew);
+      }
+      this.filterCrew();
+      this.closeEditCrewModal();
     },
   },
 };
@@ -126,7 +173,10 @@ input[type='text'] {
   border: 1px solid #ccc;
 }
 
-button.add-crew-btn {
+button.add-crew-btn,
+.back-btn,
+.edit-btn,
+.delete-btn{
   background-color: #007bff;
   color: white;
   padding: 10px 20px;
@@ -136,7 +186,10 @@ button.add-crew-btn {
   margin-bottom: 20px;
 }
 
-button.add-crew-btn:hover {
+button.add-crew-btn:hover,
+back-btn:hover,
+.edit-btn:hover,
+.delete-btn:hover,{
   background-color: #0056b3;
 }
 
@@ -171,18 +224,10 @@ th {
 .filters input[type='text']:focus {
   border-color: #007bff;
 }
-
-.back-btn {
-  background-color: #6c757d;
-  color: white;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  margin-bottom: 20px;
+button.delete-btn {
+  background-color: #dc3545;
 }
-
-.back-btn:hover {
-  background-color: #5a6268;
+button.delete-btn:hover {
+  background-color: #c82333;
 }
 </style>
